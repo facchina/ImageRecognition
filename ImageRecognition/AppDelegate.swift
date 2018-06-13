@@ -14,17 +14,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
 
+//    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+//        // Override point for customization after application launch.
+//
+//        //manually we create the app with UIWINDOW(), create our view controller
+//        //and tell the window to use it as its root view controller
+//        window = UIWindow()
+//        window?.makeKeyAndVisible()
+//        let vc = ViewController()
+//
+//        window?.rootViewController = vc
+//
+//        return true
+//    }
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
-        
-        //manually we create the app with UIWINDOW(), create our view controller
-        //and tell the window to use it as its root view controller
-        window = UIWindow()
-        window?.makeKeyAndVisible()
-        let vc = ViewController()
-        
-        window?.rootViewController = vc
-        
         return true
     }
 

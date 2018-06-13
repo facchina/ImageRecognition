@@ -13,12 +13,24 @@ import Vision
 
 class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     
+    var array = ["nothing", "Pedra", "Tesoura"]
+    @IBOutlet weak var label3: UILabel!
+    @IBOutlet weak var label2: UILabel!
+    @IBOutlet weak var button: UIButton!
+    @IBOutlet weak var myLabel: UILabel!
+    
+    var myTimer = Timer()
+    var count = 0
+    var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setCaptureSession()
         
-        view.addSubview(label)
-        setupLabel()
+//        view.addSubview(label)
+//        setupLabel()
+        
+        myLabel.isHidden = true
     }
     
     func setCaptureSession(){
@@ -61,7 +73,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         //add capture session output as a sublayer to the view controller's view
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer.frame = view.frame
-        view.layer.addSublayer(previewLayer)
+        self.view.layer.insertSublayer(previewLayer, at: 0)
         
         captureSession.startRunning()
         
@@ -115,10 +127,11 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                 }
                 self.label.text = descriptions.joined(separator: "\n")
                 self.label.sizeToFit()
-                print(descriptions.joined(separator: "\n"))
+                //print(descriptions.joined(separator: "\n"))
             }
         }
     }
+    
     func setupLabel() {
         label.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         label.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -50).isActive = true
@@ -133,6 +146,41 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         label.lineBreakMode = NSLineBreakMode.byWordWrapping
         return label
     }()
+    
+    @IBAction func Play(sender: AnyObject){
+        
+        myTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(increment), userInfo: nil, repeats: true)
+        
+        
+    }
+    
+    @objc func increment(){
+        count += 1
+        label3.text = String(count)
+        myLabel.isHidden = true
+        //print(label.text!.components(separatedBy: " ")[3])
+        check(handFormat: label.text!.components(separatedBy: " ")[3])
+        
+    }
+    
+    func check (handFormat:String){
+        if(count == 3){
+            myTimer.invalidate()
+            count = 0
+            let word = array[Int(arc4random_uniform(UInt32(array.count)))]
+            label2.text = word
+            print(String(handFormat), "\(word)\n")
+            if(handFormat == "\(word)\n"){
+                print("oi")
+                Timer.scheduledTimer(timeInterval: 0.7, target: self, selector: #selector(showLabel), userInfo: nil, repeats: false)
+            }
+        }
+    }
+    
+    @objc func showLabel() {
+        myLabel.isHidden = false
+        myLabel.text = "YOU WIN"
+    }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
