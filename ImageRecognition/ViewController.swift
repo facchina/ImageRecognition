@@ -13,24 +13,34 @@ import Vision
 
 class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     
-    var array = ["nothing", "Pedra", "Tesoura"]
-    @IBOutlet weak var label3: UILabel!
-    @IBOutlet weak var label2: UILabel!
-    @IBOutlet weak var button: UIButton!
-    @IBOutlet weak var myLabel: UILabel!
-    
+    @IBOutlet weak var timerLbl: UILabel!
+    @IBOutlet weak var playBtn: UIButton!
+    @IBOutlet weak var cameraView: UIView!
+    @IBOutlet weak var userChoiceImg: UIImageView!
+    @IBOutlet weak var computerChoiceImg: UIImageView!
+
+    @IBOutlet weak var machineLearning: UILabel!
+    var jogadas = ["Pedra", "Papel", "Tesoura"]
+    var jokenpoWords = ["JO", "KEN", "PO!"]
     var myTimer = Timer()
-    var count = 0
+    var time = 0
     var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
+    var play = false
+    var imageClassifierResult : String!
+    var playerChoice: String!
+    var computerChoice : String!
     
+    var player: AVAudioPlayer?
+    var winner : Int!
     override func viewDidLoad() {
         super.viewDidLoad()
+        playSound()
+        
         setCaptureSession()
         
-//        view.addSubview(label)
-//        setupLabel()
-        
-        myLabel.isHidden = true
+        computerChoiceImg.transform = CGAffineTransform(rotationAngle: CGFloat(M_PI))
+        computerChoiceImg.isHidden = true
+        userChoiceImg.isHidden = true
     }
     
     func setCaptureSession(){
@@ -51,29 +61,17 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         } catch {
             print(error.localizedDescription)
         }
-        
-//        captureSession.beginConfiguration()
-//        //Available capture devices
-//        let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: AVMediaType.video, position: .back)
-//
-//        guard
-//            let videoDeviceInput = try? AVCaptureDeviceInput(device: videoDevice!), captureSession.canAddInput(videoDeviceInput)
-//            else { return }
-//        //add an input to the capture session
-//        captureSession.addInput(videoDeviceInput)
-        
-        
-        /* AVCaptureVideoDataOutput is an output that captures video. It also provides us
-         * acess to the frames being captured for processing with a delegate method */
-       
+
         //setup output, add output to our capture session
         let captureOutput = AVCaptureVideoDataOutput()
         captureSession.addOutput(captureOutput)
         
         //add capture session output as a sublayer to the view controller's view
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = view.frame
-        self.view.layer.insertSublayer(previewLayer, at: 0)
+        previewLayer.frame = cameraView.frame
+
+        //previewLayer.frame = view.frame
+        cameraView.layer.insertSublayer(previewLayer, at: 0)
         
         captureSession.startRunning()
         
@@ -85,18 +83,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         
         //create a VNCoreMLModel with our custom image classifier
         guard let model = try? VNCoreMLModel(for: MyClassifier().model) else {return}
-        
-        //create our vision request
-//        let request = VNCoreMLRequest(model: model) { (finishedRequest, error) in
-//
-//            guard let results = finishedRequest.results as? [VNClassificationObservation] else { return }
-//            guard let Observation = results.first else { return }
-//
-//            DispatchQueue.main.async(execute: {
-//                //update the onscreen UILabel with the identifier returned by our model
-//                self.label.text = "\(Observation.identifier)"
-//            })
-//        }
         let request = VNCoreMLRequest(model: model, completionHandler: { [weak self] request, error in
             self?.processClassifications(for: request, error: error)
         })
@@ -110,78 +96,123 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     func processClassifications(for request: VNRequest, error: Error?) {
         DispatchQueue.main.async {
             guard let results = request.results else {
-                self.label.text = "Unable to classify image.\n\(error!.localizedDescription)"
+                //self.label.text = "Unable to classify image.\n\(error!.localizedDescription)"
+                print("Unable to classify image.\n\(error!.localizedDescription)")
                 return
             }
             // The `results` will always be `VNClassificationObservation`s, as specified by the Core ML model in this project.
             let classifications = results as! [VNClassificationObservation]
             
             if classifications.isEmpty {
-                self.label.text = "Nothing recognized."
+                print("Nothing recognized.")
             } else {
                 // Display top classifications ranked by confidence in the UI.
                 let topClassifications = classifications.prefix(2)
                 let descriptions = topClassifications.map { classification in
                     // Formats the classification for display; e.g. "(0.37) cliff, drop, drop-off".
-                    return String(format: "  (%.2f) %@", classification.confidence, classification.identifier)
+                    return String(format: "  (%.2f) %@",classification.confidence, classification.identifier)
                 }
-                self.label.text = descriptions.joined(separator: "\n")
-                self.label.sizeToFit()
-                //print(descriptions.joined(separator: "\n"))
+                self.imageClassifierResult = descriptions.joined(separator: "\n")
+                
+                self.machineLearning.text = self.imageClassifierResult
+                self.machineLearning.sizeToFit()
+                print(descriptions.joined(separator: "\n"))
             }
         }
     }
-    
-    func setupLabel() {
-        label.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-        label.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -50).isActive = true
-    }
-    //Create a UILabel containing the model's prediction
-    let label: UILabel = {
-        //create and position it using constraints
-        let label = UILabel()
-        label.textColor = .white
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.numberOfLines = 0
-        label.lineBreakMode = NSLineBreakMode.byWordWrapping
-        return label
-    }()
     
     @IBAction func Play(sender: AnyObject){
-        
-        myTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(increment), userInfo: nil, repeats: true)
-        
-        
-    }
-    
-    @objc func increment(){
-        count += 1
-        label3.text = String(count)
-        myLabel.isHidden = true
-        //print(label.text!.components(separatedBy: " ")[3])
-        check(handFormat: label.text!.components(separatedBy: " ")[3])
+        if play == false {
+            play = true
+            myTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timer), userInfo: nil, repeats: true)
+        }
         
     }
     
-    func check (handFormat:String){
-        if(count == 3){
+    @objc func timer(){
+        if time <= 1{
+            time += 1
+            timerLbl.text = jokenpoWords[time]
+        }else{
             myTimer.invalidate()
-            count = 0
-            let word = array[Int(arc4random_uniform(UInt32(array.count)))]
-            label2.text = word
-            print(String(handFormat), "\(word)\n")
-            if(handFormat == "\(word)\n"){
-                print("oi")
-                Timer.scheduledTimer(timeInterval: 0.7, target: self, selector: #selector(showLabel), userInfo: nil, repeats: false)
-            }
+            jokenpo(handFormat: imageClassifierResult.components(separatedBy: " ")[3])
         }
     }
     
-    @objc func showLabel() {
-        myLabel.isHidden = false
-        myLabel.text = "YOU WIN"
+    func checkWinner (){
+        winner = 1
+        if playerChoice == computerChoice {
+            winner = 0
+        }else{
+            if computerChoice == "Pedra" && playerChoice == "Tesoura"{
+                winner = -1
+            }else if computerChoice == "Papel" && playerChoice == "Pedra"{
+                winner = -1
+            }else if computerChoice == "Tesoura" && playerChoice == "Papel"{
+                winner = -1
+            }else if playerChoice == "Nada"{
+                winner = -1
+            }
+        }
+        
+        print("player: ", playerChoice)
+        print("computer: ", computerChoice)
+        print("result: ", winner)
+        
+        Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(nextView), userInfo: nil, repeats: false)
+    }
+    
+    @objc func nextView() {
+        self.performSegue(withIdentifier: "end", sender: self)
+    }
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "end" {
+            let finalView =  segue.destination as! FinalViewController
+            finalView.winner = self.winner
+        }
+    }
+    func jokenpo (handFormat:String){
+
+        print("parou o timer")
+        
+        computerChoice = jogadas[Int(arc4random_uniform(UInt32(jogadas.count)))]
+        let str = imageClassifierResult.components(separatedBy: CharacterSet.whitespacesAndNewlines)
+        playerChoice = str[3].trimmingCharacters(in: .whitespaces)
+        
+        print("procurar 2:", str[3])
+        
+        computerChoiceImg.image = UIImage(named: computerChoice)
+        userChoiceImg.image = UIImage(named: playerChoice)
+        computerChoiceImg.isHidden = false
+        userChoiceImg.isHidden = false
+        
+        checkWinner()
     }
 
+    func playSound() {
+        guard let url = Bundle.main.url(forResource: "Music", withExtension: "mp3") else { return }
+        
+        do {
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+            try AVAudioSession.sharedInstance().setActive(true)
+            
+            
+            
+            /* The following line is required for the player to work on iOS 11. Change the file type accordingly*/
+            player = try AVAudioPlayer(contentsOf: url, fileTypeHint: AVFileType.mp3.rawValue)
+            
+            /* iOS 10 and earlier require the following line:
+             player = try AVAudioPlayer(contentsOf: url, fileTypeHint: AVFileTypeMPEGLayer3) */
+            
+            guard let player = player else { return }
+            
+            player.play()
+            
+        } catch let error {
+            print(error.localizedDescription)
+        }
+    }
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
